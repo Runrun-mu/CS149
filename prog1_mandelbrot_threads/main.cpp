@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <getopt.h>
 
-#include "CycleTimer.h"
+#include "../common/CycleTimer.h"
 
 extern void mandelbrotSerial(
     float x0, float y0, float x1, float y1,
@@ -49,6 +49,7 @@ void usage(const char* progname) {
     printf("  -?  --help         This message\n");
 }
 
+//检测图像是否一致
 bool verifyResult (int *gold, int *result, int width, int height) {
 
     int i, j;
@@ -68,8 +69,8 @@ bool verifyResult (int *gold, int *result, int width, int height) {
 
 int main(int argc, char** argv) {
 
-    const unsigned int width = 1600;
-    const unsigned int height = 1200;
+    const unsigned int width = 800;
+    const unsigned int height = 600;
     const int maxIterations = 256;
     int numThreads = 2;
 
@@ -77,6 +78,7 @@ int main(int argc, char** argv) {
     float x1 = 1;
     float y0 = -1;
     float y1 = 1;
+    //实部范围和虚部范围
 
     // parse commandline options ////////////////////////////////////////////
     int opt;
@@ -154,6 +156,7 @@ int main(int argc, char** argv) {
 
     printf("[mandelbrot thread]:\t\t[%.3f] ms\n", minThread * 1000);
     writePPMImage(output_thread, width, height, "mandelbrot-thread.ppm", maxIterations);
+
 
     if (! verifyResult (output_serial, output_thread, width, height)) {
         printf ("Error : Output from threads does not match serial output\n");

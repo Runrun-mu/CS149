@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <thread>
 
-#include "CycleTimer.h"
+#include "../common/CycleTimer.h"
 
 typedef struct {
     float x0, x1;
@@ -34,6 +34,14 @@ void workerThreadStart(WorkerArgs * const args) {
     // to compute a part of the output image.  For example, in a
     // program that uses two threads, thread 0 could compute the top
     // half of the image and thread 1 could compute the bottom half.
+    int rowsPerThread = args->height / args->numThreads;
+    int startRow = args->threadId * rowsPerThread;
+    int totalRows = rowsPerThread;
+    if (args->threadId + 1 == args->numThreads) {
+        totalRows = args->height - startRow;
+    }
+    mandelbrotSerial(args->x0, args->y0, args->x1, args->y1, 
+    args->width, args->height, startRow, totalRows, args->maxIterations, args->output);
 
     printf("Hello world from thread %d\n", args->threadId);
 }

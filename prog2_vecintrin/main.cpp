@@ -115,6 +115,7 @@ void initValue(float* values, int* exponents, float* output, float* gold, unsign
   for (unsigned int i=0; i<N+VECTOR_WIDTH; i++)
   {
     // random input values
+    //初始化一些随机的数据
     values[i] = -1.f + 4.f * static_cast<float>(rand()) / RAND_MAX;
     exponents[i] = rand() % EXP_MAX;
     output[i] = 0.f;
@@ -178,10 +179,10 @@ void absSerial(float* values, float* output, int N) {
 
 // implementation of absSerial() above, but it is vectorized using CS149 intrinsics
 void absVector(float* values, float* output, int N) {
-  __cs149_vec_float x;
-  __cs149_vec_float result;
-  __cs149_vec_float zero = _cs149_vset_float(0.f);
-  __cs149_mask maskAll, maskIsNegative, maskIsNotNegative;
+  __cs149_vec_float x; //初始化一个x
+  __cs149_vec_float result; //init result
+  __cs149_vec_float zero = _cs149_vset_float(0.f); //init zero
+  __cs149_mask maskAll, maskIsNegative, maskIsNotNegative; //init mask
 
 //  Note: Take a careful look at this loop indexing.  This example
 //  code is not guaranteed to work when (N % VECTOR_WIDTH) != 0.
@@ -242,6 +243,35 @@ void clampedExpSerial(float* values, int* exponents, float* output, int N) {
 
 void clampedExpVector(float* values, int* exponents, float* output, int N) {
 
+  int i;
+  __cs149_vec_float result;
+  __cs149_vec_float value;
+  __cs149_vec_int exp;
+  __cs149_vec_int zero = _cs149_vset_int(0);
+  __cs149_vec_int one = _cs149_vset_int(1);
+  __cs149_vec_float max = _cs149_vset_float(9.999999f);
+  __cs149_mask maskAll = _cs149_init_ones();
+  for(i = 0; i + VECTOR_WIDTH <= N; i += VECTOR_WIDTH){
+    result = _cs149_vset_float(1.f);
+    _cs149_vload_float(value, values + i, maskAll);
+    _cs149_vload_int(exp, exponents + i, maskAll);
+    __cs149_mask mask;
+    _cs149_vgt_int(mask, exp, zero, maskAll);
+    while(_cs149_cntbits(mask) > 0){
+      _cs149_vmult_float(result, result, value, mask);
+      _cs149_vsub_int(exp, exp, one, mask);
+      _cs149_vgt_int(mask, exp, zero, mask);
+    }
+    __cs149_mask clampMask;
+    _cs149_vgt_float(clampMask, result, max, maskAll);
+    _cs149_vset_float(result, 9.999999f, clampMask);
+    _cs149_vstore_float(output + i, result, maskAll);
+  }
+
+  if(i != N){
+    i -= VECTOR_WIDTH;
+    clampedExpSerial(values + i, exponents + i, output + i, N - i);
+  }
   //
   // CS149 STUDENTS TODO: Implement your vectorized version of
   // clampedExpSerial() here.
@@ -270,11 +300,21 @@ float arraySumVector(float* values, int N) {
   //
   // CS149 STUDENTS TODO: Implement your vectorized version of arraySumSerial here
   //
+  __cs149_mask maskAll = _cs149_init_ones(); // mask all
+  __cs149_vec_float sum = _cs149_vset_float(0.f);
+  __cs149_vec_float temp;
   
   for (int i=0; i<N; i+=VECTOR_WIDTH) {
-
+    _cs149_vload_float(temp, values + i, maskAll);
+    _cs149_vadd_float(sum, sum, temp, maskAll);
   }
-
-  return 0.0;
+  int i = VECTOR_WIDTH;
+    while (i /= 2) {
+      _cs149_hadd_float(sum, sum);
+      _cs149_interleave_float(sum, sum);
+    }
+    float output[VECTOR_WIDTH];
+    _cs149_vstore_float(output, sum, maskAll);
+    return output[0];
 }
 
